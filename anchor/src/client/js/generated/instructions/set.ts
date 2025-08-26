@@ -101,11 +101,15 @@ export function getSetInstruction<
   config?: { programAddress?: TProgramAddress }
 ): SetInstruction<TProgramAddress, TAccountVotingappviatemplate> {
   // Program address.
-  const programAddress = config?.programAddress ?? VOTINGAPPVIATEMPLATE_PROGRAM_ADDRESS;
+  const programAddress =
+    config?.programAddress ?? VOTINGAPPVIATEMPLATE_PROGRAM_ADDRESS;
 
   // Original accounts.
   const originalAccounts = {
-    votingappviatemplate: { value: input.votingappviatemplate ?? null, isWritable: true },
+    votingappviatemplate: {
+      value: input.votingappviatemplate ?? null,
+      isWritable: true,
+    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,

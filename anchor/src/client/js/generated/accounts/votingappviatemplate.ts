@@ -40,10 +40,15 @@ export const VOTINGAPPVIATEMPLATE_DISCRIMINATOR = new Uint8Array([
 ]);
 
 export function getVotingappviatemplateDiscriminatorBytes() {
-  return fixEncoderSize(getBytesEncoder(), 8).encode(VOTINGAPPVIATEMPLATE_DISCRIMINATOR);
+  return fixEncoderSize(getBytesEncoder(), 8).encode(
+    VOTINGAPPVIATEMPLATE_DISCRIMINATOR
+  );
 }
 
-export type Votingappviatemplate = { discriminator: ReadonlyUint8Array; count: number };
+export type Votingappviatemplate = {
+  discriminator: ReadonlyUint8Array;
+  count: number;
+};
 
 export type VotingappviatemplateArgs = { count: number };
 
@@ -64,8 +69,14 @@ export function getVotingappviatemplateDecoder(): FixedSizeDecoder<Votingappviat
   ]);
 }
 
-export function getVotingappviatemplateCodec(): FixedSizeCodec<VotingappviatemplateArgs, Votingappviatemplate> {
-  return combineCodec(getVotingappviatemplateEncoder(), getVotingappviatemplateDecoder());
+export function getVotingappviatemplateCodec(): FixedSizeCodec<
+  VotingappviatemplateArgs,
+  Votingappviatemplate
+> {
+  return combineCodec(
+    getVotingappviatemplateEncoder(),
+    getVotingappviatemplateDecoder()
+  );
 }
 
 export function decodeVotingappviatemplate<TAddress extends string = string>(
@@ -76,24 +87,34 @@ export function decodeVotingappviatemplate<TAddress extends string = string>(
 ): MaybeAccount<Votingappviatemplate, TAddress>;
 export function decodeVotingappviatemplate<TAddress extends string = string>(
   encodedAccount: EncodedAccount<TAddress> | MaybeEncodedAccount<TAddress>
-): Account<Votingappviatemplate, TAddress> | MaybeAccount<Votingappviatemplate, TAddress> {
+):
+  | Account<Votingappviatemplate, TAddress>
+  | MaybeAccount<Votingappviatemplate, TAddress> {
   return decodeAccount(
     encodedAccount as MaybeEncodedAccount<TAddress>,
     getVotingappviatemplateDecoder()
   );
 }
 
-export async function fetchVotingappviatemplate<TAddress extends string = string>(
+export async function fetchVotingappviatemplate<
+  TAddress extends string = string,
+>(
   rpc: Parameters<typeof fetchEncodedAccount>[0],
   address: Address<TAddress>,
   config?: FetchAccountConfig
 ): Promise<Account<Votingappviatemplate, TAddress>> {
-  const maybeAccount = await fetchMaybeVotingappviatemplate(rpc, address, config);
+  const maybeAccount = await fetchMaybeVotingappviatemplate(
+    rpc,
+    address,
+    config
+  );
   assertAccountExists(maybeAccount);
   return maybeAccount;
 }
 
-export async function fetchMaybeVotingappviatemplate<TAddress extends string = string>(
+export async function fetchMaybeVotingappviatemplate<
+  TAddress extends string = string,
+>(
   rpc: Parameters<typeof fetchEncodedAccount>[0],
   address: Address<TAddress>,
   config?: FetchAccountConfig
@@ -107,7 +128,11 @@ export async function fetchAllVotingappviatemplate(
   addresses: Array<Address>,
   config?: FetchAccountsConfig
 ): Promise<Account<Votingappviatemplate>[]> {
-  const maybeAccounts = await fetchAllMaybeVotingappviatemplate(rpc, addresses, config);
+  const maybeAccounts = await fetchAllMaybeVotingappviatemplate(
+    rpc,
+    addresses,
+    config
+  );
   assertAccountsExist(maybeAccounts);
   return maybeAccounts;
 }
@@ -118,7 +143,9 @@ export async function fetchAllMaybeVotingappviatemplate(
   config?: FetchAccountsConfig
 ): Promise<MaybeAccount<Votingappviatemplate>[]> {
   const maybeAccounts = await fetchEncodedAccounts(rpc, addresses, config);
-  return maybeAccounts.map((maybeAccount) => decodeVotingappviatemplate(maybeAccount));
+  return maybeAccounts.map((maybeAccount) =>
+    decodeVotingappviatemplate(maybeAccount)
+  );
 }
 
 export function getVotingappviatemplateSize(): number {

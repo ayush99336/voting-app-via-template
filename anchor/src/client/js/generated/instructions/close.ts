@@ -102,14 +102,22 @@ export function getCloseInstruction<
 >(
   input: CloseInput<TAccountPayer, TAccountVotingappviatemplate>,
   config?: { programAddress?: TProgramAddress }
-): CloseInstruction<TProgramAddress, TAccountPayer, TAccountVotingappviatemplate> {
+): CloseInstruction<
+  TProgramAddress,
+  TAccountPayer,
+  TAccountVotingappviatemplate
+> {
   // Program address.
-  const programAddress = config?.programAddress ?? VOTINGAPPVIATEMPLATE_PROGRAM_ADDRESS;
+  const programAddress =
+    config?.programAddress ?? VOTINGAPPVIATEMPLATE_PROGRAM_ADDRESS;
 
   // Original accounts.
   const originalAccounts = {
     payer: { value: input.payer ?? null, isWritable: true },
-    votingappviatemplate: { value: input.votingappviatemplate ?? null, isWritable: true },
+    votingappviatemplate: {
+      value: input.votingappviatemplate ?? null,
+      isWritable: true,
+    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -124,7 +132,11 @@ export function getCloseInstruction<
     ],
     programAddress,
     data: getCloseInstructionDataEncoder().encode({}),
-  } as CloseInstruction<TProgramAddress, TAccountPayer, TAccountVotingappviatemplate>;
+  } as CloseInstruction<
+    TProgramAddress,
+    TAccountPayer,
+    TAccountVotingappviatemplate
+  >;
 
   return instruction;
 }

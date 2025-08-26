@@ -79,7 +79,9 @@ export function getIncrementInstructionDataCodec(): FixedSizeCodec<
   );
 }
 
-export type IncrementInput<TAccountVotingappviatemplate extends string = string> = {
+export type IncrementInput<
+  TAccountVotingappviatemplate extends string = string,
+> = {
   votingappviatemplate: Address<TAccountVotingappviatemplate>;
 };
 
@@ -91,11 +93,15 @@ export function getIncrementInstruction<
   config?: { programAddress?: TProgramAddress }
 ): IncrementInstruction<TProgramAddress, TAccountVotingappviatemplate> {
   // Program address.
-  const programAddress = config?.programAddress ?? VOTINGAPPVIATEMPLATE_PROGRAM_ADDRESS;
+  const programAddress =
+    config?.programAddress ?? VOTINGAPPVIATEMPLATE_PROGRAM_ADDRESS;
 
   // Original accounts.
   const originalAccounts = {
-    votingappviatemplate: { value: input.votingappviatemplate ?? null, isWritable: true },
+    votingappviatemplate: {
+      value: input.votingappviatemplate ?? null,
+      isWritable: true,
+    },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,

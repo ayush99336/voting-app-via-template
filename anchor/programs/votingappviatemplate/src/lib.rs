@@ -2,69 +2,109 @@
 
 use anchor_lang::prelude::*;
 
-declare_id!("JAVuBXeBZqXNtS73azhBDAoYaaAFfo4gWXoZe2e7Jf8H");
+declare_id!("BfUzfrtvzJd3GCPgKbe4jMi9KWgHAWHnx1ovE5cgotAQ");
 
 #[program]
-pub mod votingappviatemplate {
+pub mod votingdapp {
+
     use super::*;
+    pub fn initialize_poll(
+        ctx: Context<InitializePoll>,
+        poll_id: u64,
+        description: String,
+        poll_start: u64,
+        poll_end: u64,
+    ) -> Result<()> {
+        let poll = &mut ctx.accounts.poll;
+        poll.poll_id = poll_id;
+        poll.description = description;
+        poll.poll_start = poll_start;
+        poll.poll_end = poll_end;
 
-    pub fn close(_ctx: Context<CloseVotingappviatemplate>) -> Result<()> {
         Ok(())
     }
 
-    pub fn decrement(ctx: Context<Update>) -> Result<()> {
-        ctx.accounts.votingappviatemplate.count = ctx.accounts.votingappviatemplate.count.checked_sub(1).unwrap();
+    pub fn initialize_candidate(
+        ctx: Context<InitializeCandidate>,
+        candidate_name: String,
+        _poll_id: u64,
+    ) -> Result<()> {
+        let candidate = &mut ctx.accounts.candidate;
+        candidate.candidate_name = candidate_name;
+        ctx.accounts.poll.poll_option_index += 1;
+
         Ok(())
     }
+    pub fn vote(ctx: Context<Vote>, _candidate_name: String, _poll_id: u64) -> Result<()> {
+        let candidate_account = &mut ctx.accounts.candidate;
 
-    pub fn increment(ctx: Context<Update>) -> Result<()> {
-        ctx.accounts.votingappviatemplate.count = ctx.accounts.votingappviatemplate.count.checked_add(1).unwrap();
-        Ok(())
-    }
-
-    pub fn initialize(_ctx: Context<InitializeVotingappviatemplate>) -> Result<()> {
-        Ok(())
-    }
-
-    pub fn set(ctx: Context<Update>, value: u8) -> Result<()> {
-        ctx.accounts.votingappviatemplate.count = value.clone();
+        let poll = &mut ctx.accounts.poll;
+        let current_time = Clock::get()?.unix_timestamp;
+        if current_time < poll.poll_start as i64 {
+            return Err(ErrorCode::PollNotStarted.into());
+        }
+        if current_time > poll.poll_end as i64 {
+            return Err(ErrorCode::PollEnded.into());
+        }
+        candidate_account.candidate_votes += 1;
         Ok(())
     }
 }
-
 #[derive(Accounts)]
-pub struct InitializeVotingappviatemplate<'info> {
+#[instruction(poll_id:u64)]
+pub struct InitializePoll<'info> {
     #[account(mut)]
-    pub payer: Signer<'info>,
-
-    #[account(
-  init,
-  space = 8 + Votingappviatemplate::INIT_SPACE,
-  payer = payer
-    )]
-    pub votingappviatemplate: Account<'info, Votingappviatemplate>,
+    pub signer: Signer<'info>,
+    #[account(init,payer=signer,space=8+Poll::INIT_SPACE,seeds=[poll_id.to_le_bytes().as_ref()],bump)]
+    pub poll: Account<'info, Poll>,
     pub system_program: Program<'info, System>,
 }
-#[derive(Accounts)]
-pub struct CloseVotingappviatemplate<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
 
-    #[account(
-  mut,
-  close = payer, // close account and return lamports to payer
-    )]
-    pub votingappviatemplate: Account<'info, Votingappviatemplate>,
+#[derive(Accounts)]
+#[instruction(candidate_name:String,poll_id:u64)]
+pub struct InitializeCandidate<'info> {
+    #[account(mut)]
+    pub signer: Signer<'info>,
+    #[account(seeds=[poll_id.to_le_bytes().as_ref()],bump)]
+    pub poll: Account<'info, Poll>,
+    #[account(init,payer=signer,space=8+Candidate::INIT_SPACE,seeds=[poll_id.to_le_bytes().as_ref(),candidate_name.as_ref()],bump)]
+    pub candidate: Account<'info, Candidate>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
-pub struct Update<'info> {
+#[instruction(candidate_name:String,poll_id:u64)]
+pub struct Vote<'info> {
     #[account(mut)]
-    pub votingappviatemplate: Account<'info, Votingappviatemplate>,
+    pub voter: Signer<'info>,
+    // candidate PDA seed order must match InitializeCandidate (poll_id, candidate_name)
+    #[account(mut, seeds=[poll_id.to_le_bytes().as_ref(), candidate_name.as_ref()],bump)]
+    pub candidate: Account<'info, Candidate>,
+    #[account(seeds=[poll_id.to_le_bytes().as_ref()],bump)]
+    pub poll: Account<'info, Poll>,
+
+    pub system_program: Program<'info, System>,
 }
 
 #[account]
 #[derive(InitSpace)]
-pub struct Votingappviatemplate {
-    count: u8,
+pub struct Candidate {
+    #[max_len(32)]
+    pub candidate_name: String,
+    pub candidate_votes: u64,
+}
+#[account]
+#[derive(InitSpace)]
+pub struct Poll {
+    pub poll_id: u64,
+    #[max_len(280)]
+    pub description: String,
+    pub poll_start: u64,
+    pub poll_end: u64,
+    pub poll_option_index: u64,
+}
+#[error_code]
+enum ErrorCode {
+    PollNotStarted,
+    PollEnded,
 }
