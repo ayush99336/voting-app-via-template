@@ -1,146 +1,199 @@
+"use client"
+
 import {
-  VotingappviatemplateAccount,
-  getCloseInstruction,
-  getVotingappviatemplateProgramAccounts,
-  getVotingappviatemplateProgramId,
-  getDecrementInstruction,
-  getIncrementInstruction,
-  getInitializeInstruction,
-  getSetInstruction,
-} from '@project/anchor'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useMemo } from 'react'
-import { toast } from 'sonner'
-import { generateKeyPairSigner } from 'gill'
-import { useWalletUi } from '@wallet-ui/react'
-import { useWalletTransactionSignAndSend } from '../solana/use-wallet-transaction-sign-and-send'
-import { useClusterVersion } from '@/components/cluster/use-cluster-version'
-import { toastTx } from '@/components/toast-tx'
-import { useWalletUiSigner } from '@/components/solana/use-wallet-ui-signer'
-import { install as installEd25519 } from '@solana/webcrypto-ed25519-polyfill'
+  VotingdappPollAccount,
+  VotingdappCandidateAccount,
+  getVotingdappPollAccounts,
+  getVotingdappCandidateAccounts,
+  getVotingdappProgramId,
+  getInitializePollInstructionAsync,
+  getInitializeCandidateInstructionAsync,
+  getVoteInstructionAsync,
+} from "@project/anchor"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMemo } from "react"
+import { toast } from "sonner"
+import { useWalletUi } from "@wallet-ui/react"
+import { useWalletTransactionSignAndSend } from "../solana/use-wallet-transaction-sign-and-send"
+import { useWalletUiSigner } from "@/components/solana/use-wallet-ui-signer"
+import { getProgramDerivedAddress, getU64Encoder, getUtf8Encoder } from "gill"
 
-// polyfill ed25519 for browsers (to allow `generateKeyPairSigner` to work)
-installEd25519()
-
-export function useVotingappviatemplateProgramId() {
+export function useVotingdappProgramId() {
   const { cluster } = useWalletUi()
-  return useMemo(() => getVotingappviatemplateProgramId(cluster.id), [cluster])
+  return useMemo(() => getVotingdappProgramId(cluster.id), [cluster])
 }
 
-export function useVotingappviatemplateProgram() {
-  const { client, cluster } = useWalletUi()
-  const programId = useVotingappviatemplateProgramId()
-  const query = useClusterVersion()
-
-  return useQuery({
-    retry: false,
-    queryKey: ['get-program-account', { cluster, clusterVersion: query.data }],
-    queryFn: () => client.rpc.getAccountInfo(programId).send(),
-  })
-}
-
-export function useVotingappviatemplateInitializeMutation() {
-  const { cluster } = useWalletUi()
-  const queryClient = useQueryClient()
-  const signer = useWalletUiSigner()
-  const signAndSend = useWalletTransactionSignAndSend()
-
-  return useMutation({
-    mutationFn: async () => {
-      const votingappviatemplate = await generateKeyPairSigner()
-      return await signAndSend(getInitializeInstruction({ payer: signer, votingappviatemplate }), signer)
-    },
-    onSuccess: async (tx) => {
-      toastTx(tx)
-      await queryClient.invalidateQueries({ queryKey: ['votingappviatemplate', 'accounts', { cluster }] })
-    },
-    onError: () => toast.error('Failed to run program'),
-  })
-}
-
-export function useVotingappviatemplateDecrementMutation({ votingappviatemplate }: { votingappviatemplate: VotingappviatemplateAccount }) {
-  const invalidateAccounts = useVotingappviatemplateAccountsInvalidate()
-  const signer = useWalletUiSigner()
-  const signAndSend = useWalletTransactionSignAndSend()
-
-  return useMutation({
-    mutationFn: async () => await signAndSend(getDecrementInstruction({ votingappviatemplate: votingappviatemplate.address }), signer),
-    onSuccess: async (tx) => {
-      toastTx(tx)
-      await invalidateAccounts()
-    },
-  })
-}
-
-export function useVotingappviatemplateIncrementMutation({ votingappviatemplate }: { votingappviatemplate: VotingappviatemplateAccount }) {
-  const invalidateAccounts = useVotingappviatemplateAccountsInvalidate()
-  const signAndSend = useWalletTransactionSignAndSend()
-  const signer = useWalletUiSigner()
-
-  return useMutation({
-    mutationFn: async () => await signAndSend(getIncrementInstruction({ votingappviatemplate: votingappviatemplate.address }), signer),
-    onSuccess: async (tx) => {
-      toastTx(tx)
-      await invalidateAccounts()
-    },
-  })
-}
-
-export function useVotingappviatemplateSetMutation({ votingappviatemplate }: { votingappviatemplate: VotingappviatemplateAccount }) {
-  const invalidateAccounts = useVotingappviatemplateAccountsInvalidate()
-  const signAndSend = useWalletTransactionSignAndSend()
-  const signer = useWalletUiSigner()
-
-  return useMutation({
-    mutationFn: async (value: number) =>
-      await signAndSend(
-        getSetInstruction({
-          votingappviatemplate: votingappviatemplate.address,
-          value,
-        }),
-        signer,
-      ),
-    onSuccess: async (tx) => {
-      toastTx(tx)
-      await invalidateAccounts()
-    },
-  })
-}
-
-export function useVotingappviatemplateCloseMutation({ votingappviatemplate }: { votingappviatemplate: VotingappviatemplateAccount }) {
-  const invalidateAccounts = useVotingappviatemplateAccountsInvalidate()
-  const signAndSend = useWalletTransactionSignAndSend()
-  const signer = useWalletUiSigner()
-
-  return useMutation({
-    mutationFn: async () => {
-      return await signAndSend(getCloseInstruction({ payer: signer, votingappviatemplate: votingappviatemplate.address }), signer)
-    },
-    onSuccess: async (tx) => {
-      toastTx(tx)
-      await invalidateAccounts()
-    },
-  })
-}
-
-export function useVotingappviatemplateAccountsQuery() {
+export function useVotingdappClient() {
   const { client } = useWalletUi()
+  return client
+}
 
+export function useVotingdappPollsQuery() {
+  const client = useVotingdappClient()
   return useQuery({
-    queryKey: useVotingappviatemplateAccountsQueryKey(),
-    queryFn: async () => await getVotingappviatemplateProgramAccounts(client.rpc),
+    queryKey: ["votingdapp", "polls"],
+    queryFn: async () => {
+      if (!client) return [] as VotingdappPollAccount[]
+      return await getVotingdappPollAccounts(client.rpc)
+    },
+    enabled: !!client,
   })
 }
 
-function useVotingappviatemplateAccountsInvalidate() {
-  const queryClient = useQueryClient()
-  const queryKey = useVotingappviatemplateAccountsQueryKey()
-
-  return () => queryClient.invalidateQueries({ queryKey })
+export function useVotingdappCandidatesQuery() {
+  const client = useVotingdappClient()
+  return useQuery({
+    queryKey: ["votingdapp", "candidates"],
+    queryFn: async () => {
+      if (!client) return [] as VotingdappCandidateAccount[]
+      return await getVotingdappCandidateAccounts(client.rpc)
+    },
+    enabled: !!client,
+  })
 }
 
-function useVotingappviatemplateAccountsQueryKey() {
-  const { cluster } = useWalletUi()
+export function useVotingdappCandidatesByPollId(pollId: number | bigint) {
+  const client = useVotingdappClient()
+  const programId = useVotingdappProgramId()
+  return useQuery({
+    queryKey: ["votingdapp", "candidates-by-poll", programId.toString(), String(pollId)],
+    queryFn: async () => {
+      if (!client) return [] as VotingdappCandidateAccount[]
+      const all = await getVotingdappCandidateAccounts(client.rpc)
+      // Filter by matching the PDA for this pollId and candidateName
+      const filtered: VotingdappCandidateAccount[] = []
+      for (const cand of all) {
+        const name = cand.data.candidateName
+        const [expectedAddr] = await getProgramDerivedAddress({
+          programAddress: programId,
+          seeds: [
+            getU64Encoder().encode(BigInt(pollId)),
+            getUtf8Encoder().encode(name),
+          ],
+        })
+        if (String(expectedAddr) === String(cand.address)) {
+          filtered.push(cand)
+        }
+      }
+      return filtered
+    },
+    enabled: !!client && !!programId && pollId !== undefined && pollId !== null,
+  })
+}
 
-  return ['votingappviatemplate', 'accounts', { cluster }]
+export function useInitializePollMutation() {
+  const signAndSend = useWalletTransactionSignAndSend()
+  const signer = useWalletUiSigner()
+  const queryClient = useQueryClient()
+  const programId = useVotingdappProgramId()
+
+  return useMutation({
+    mutationKey: ["votingdapp", "initializePoll"],
+    mutationFn: async (args: { pollId: number | bigint; description: string; pollStart: number | bigint; pollEnd: number | bigint }) => {
+      const ix = await getInitializePollInstructionAsync(
+        {
+          signer,
+          pollId: args.pollId,
+          description: args.description,
+          pollStart: args.pollStart,
+          pollEnd: args.pollEnd,
+        },
+        { programAddress: programId }
+      )
+      return await signAndSend(ix, signer)
+    },
+    onSuccess: (sig: string, _vars) => {
+      toast.success(`Initialized poll. Tx: ${sig}`)
+      // Refresh all poll lists
+      queryClient.invalidateQueries({ queryKey: ["votingdapp"] })
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Initialize poll failed"),
+  })
+}
+
+export function useInitializeCandidateMutation() {
+  const signAndSend = useWalletTransactionSignAndSend()
+  const signer = useWalletUiSigner()
+  const queryClient = useQueryClient()
+  const programId = useVotingdappProgramId()
+
+  return useMutation({
+    mutationKey: ["votingdapp", "initializeCandidate"],
+    mutationFn: async (args: { pollId: number | bigint; candidateName: string }) => {
+      const [pollAddress] = await getProgramDerivedAddress({
+        programAddress: programId,
+        seeds: [getU64Encoder().encode(BigInt(args.pollId))],
+      })
+      const [candidateAddress] = await getProgramDerivedAddress({
+        programAddress: programId,
+        seeds: [
+          getU64Encoder().encode(BigInt(args.pollId)),
+          // IMPORTANT: raw UTF-8 bytes, no length prefix, to match Anchor seeds
+          getUtf8Encoder().encode(args.candidateName),
+        ],
+      })
+
+      const ix = await getInitializeCandidateInstructionAsync(
+        {
+          signer,
+          poll: pollAddress,
+          candidate: candidateAddress,
+          pollId: args.pollId,
+          candidateName: args.candidateName,
+        },
+        { programAddress: programId }
+      )
+      return await signAndSend(ix, signer)
+    },
+    onSuccess: (sig: string, vars) => {
+      toast.success(`Initialized candidate. Tx: ${sig}`)
+      // Refresh candidate list (prefix match) and global caches
+      queryClient.invalidateQueries({ queryKey: ["votingdapp", "candidates-by-poll"] })
+      queryClient.invalidateQueries({ queryKey: ["votingdapp", "candidates"] })
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Initialize candidate failed"),
+  })
+}
+
+export function useVoteMutation() {
+  const signAndSend = useWalletTransactionSignAndSend()
+  const signer = useWalletUiSigner()
+  const queryClient = useQueryClient()
+  const programId = useVotingdappProgramId()
+
+  return useMutation({
+    mutationKey: ["votingdapp", "vote"],
+    mutationFn: async (args: { pollId: number | bigint; candidateName: string }) => {
+      const [pollAddress] = await getProgramDerivedAddress({
+        programAddress: programId,
+        seeds: [getU64Encoder().encode(BigInt(args.pollId))],
+      })
+      const [candidateAddress] = await getProgramDerivedAddress({
+        programAddress: programId,
+        seeds: [
+          getU64Encoder().encode(BigInt(args.pollId)),
+          getUtf8Encoder().encode(args.candidateName),
+        ],
+      })
+
+      const ix = await getVoteInstructionAsync(
+        {
+          voter: signer,
+          poll: pollAddress,
+          candidate: candidateAddress,
+          pollId: args.pollId,
+          candidateName: args.candidateName,
+        },
+        { programAddress: programId }
+      )
+      return await signAndSend(ix, signer)
+    },
+    onSuccess: (sig: string, vars) => {
+      toast.success(`Voted. Tx: ${sig}`)
+      // Refresh candidate list (prefix match) and global caches
+      queryClient.invalidateQueries({ queryKey: ["votingdapp", "candidates-by-poll"] })
+      queryClient.invalidateQueries({ queryKey: ["votingdapp", "candidates"] })
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Vote failed"),
+  })
 }

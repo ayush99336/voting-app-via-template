@@ -1,155 +1,223 @@
-import { ellipsify } from '@wallet-ui/react'
+"use client"
+
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
 import {
-  useVotingappviatemplateAccountsQuery,
-  useVotingappviatemplateCloseMutation,
-  useVotingappviatemplateDecrementMutation,
-  useVotingappviatemplateIncrementMutation,
-  useVotingappviatemplateInitializeMutation,
-  useVotingappviatemplateProgram,
-  useVotingappviatemplateProgramId,
-  useVotingappviatemplateSetMutation,
-} from './votingappviatemplate-data-access'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ExplorerLink } from '../cluster/cluster-ui'
-import { VotingappviatemplateAccount } from '@project/anchor'
-import { ReactNode } from 'react'
+    useInitializePollMutation,
+    useInitializeCandidateMutation,
+    useVoteMutation,
+    useVotingdappPollsQuery,
+    useVotingdappCandidatesByPollId,
+} from "./votingappviatemplate-data-access"
 
-export function VotingappviatemplateProgramExplorerLink() {
-  const programId = useVotingappviatemplateProgramId()
+export function CreatePollForm() {
+    const [pollId, setPollId] = useState(1)
+    const [description, setDescription] = useState("")
+    const [pollStart, setPollStart] = useState<number>(() => Math.floor(Date.now() / 1000))
+    const [pollEnd, setPollEnd] = useState<number>(() => Math.floor(Date.now() / 1000) + 3600)
 
-  return <ExplorerLink address={programId.toString()} label={ellipsify(programId.toString())} />
-}
+    const { mutateAsync, isPending } = useInitializePollMutation()
 
-export function VotingappviatemplateList() {
-  const votingappviatemplateAccountsQuery = useVotingappviatemplateAccountsQuery()
+    async function onSubmit(e: React.FormEvent) {
+        e.preventDefault()
+        await mutateAsync({
+            pollId: BigInt(pollId),
+            description,
+            pollStart: BigInt(pollStart),
+            pollEnd: BigInt(pollEnd),
+        })
+        setDescription("")
+    }
 
-  if (votingappviatemplateAccountsQuery.isLoading) {
-    return <span className="loading loading-spinner loading-lg"></span>
-  }
-
-  if (!votingappviatemplateAccountsQuery.data?.length) {
     return (
-      <div className="text-center">
-        <h2 className={'text-2xl'}>No accounts</h2>
-        No accounts found. Initialize one to get started.
-      </div>
+        <Card className="p-4 space-y-3">
+            <form onSubmit={onSubmit} className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <Label htmlFor="pollId">Poll ID</Label>
+                        <Input
+                            id="pollId"
+                            type="number"
+                            value={pollId}
+                            onChange={(e) => setPollId(parseInt(e.target.value || "0", 10))}
+                            min={0}
+                            required
+                        />
+                    </div>
+                    <div>
+                        <Label htmlFor="description">Description</Label>
+                        <Input
+                            id="description"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            placeholder="Describe the poll"
+                            required
+                        />
+                    </div>
+                    <div>
+                        <Label htmlFor="pollStart">Start (unix seconds)</Label>
+                        <Input
+                            id="pollStart"
+                            type="number"
+                            value={pollStart}
+                            onChange={(e) => setPollStart(parseInt(e.target.value || "0", 10))}
+                            min={0}
+                            required
+                        />
+                    </div>
+                    <div>
+                        <Label htmlFor="pollEnd">End (unix seconds)</Label>
+                        <Input
+                            id="pollEnd"
+                            type="number"
+                            value={pollEnd}
+                            onChange={(e) => setPollEnd(parseInt(e.target.value || "0", 10))}
+                            min={0}
+                            required
+                        />
+                    </div>
+                </div>
+                <Button type="submit" disabled={isPending}>
+                    {isPending ? "Creating..." : "Create Poll"}
+                </Button>
+            </form>
+        </Card>
     )
-  }
-
-  return (
-    <div className="grid lg:grid-cols-2 gap-4">
-      {votingappviatemplateAccountsQuery.data?.map((votingappviatemplate) => (
-        <VotingappviatemplateCard key={votingappviatemplate.address} votingappviatemplate={votingappviatemplate} />
-      ))}
-    </div>
-  )
 }
 
-export function VotingappviatemplateProgramGuard({ children }: { children: ReactNode }) {
-  const programAccountQuery = useVotingappviatemplateProgram()
+export function PollList() {
+    const { data, isLoading, isError } = useVotingdappPollsQuery()
 
-  if (programAccountQuery.isLoading) {
-    return <span className="loading loading-spinner loading-lg"></span>
-  }
+    if (isLoading) return <div>Loading polls...</div>
+    if (isError) return <div>Failed to load polls</div>
 
-  if (!programAccountQuery.data?.value) {
+    if (!data || data.length === 0) return <div>No polls yet.</div>
+
     return (
-      <div className="alert alert-info flex justify-center">
-        <span>Program account not found. Make sure you have deployed the program and are on the correct cluster.</span>
-      </div>
-    )
-  }
-
-  return children
-}
-
-function VotingappviatemplateCard({ votingappviatemplate }: { votingappviatemplate: VotingappviatemplateAccount }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Votingappviatemplate: {votingappviatemplate.data.count}</CardTitle>
-        <CardDescription>
-          Account: <ExplorerLink address={votingappviatemplate.address} label={ellipsify(votingappviatemplate.address)} />
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex gap-4 justify-evenly">
-          <VotingappviatemplateButtonIncrement votingappviatemplate={votingappviatemplate} />
-          <VotingappviatemplateButtonSet votingappviatemplate={votingappviatemplate} />
-          <VotingappviatemplateButtonDecrement votingappviatemplate={votingappviatemplate} />
-          <VotingappviatemplateButtonClose votingappviatemplate={votingappviatemplate} />
+        <div className="space-y-4">
+            {data.map((poll) => (
+                <PollItem
+                    key={poll.address}
+                    pollId={Number(poll.data.pollId)}
+                    description={poll.data.description}
+                    pollStart={Number(poll.data.pollStart)}
+                    pollEnd={Number(poll.data.pollEnd)}
+                />
+            ))}
         </div>
-      </CardContent>
-    </Card>
-  )
+    )
 }
 
-export function VotingappviatemplateButtonInitialize() {
-  const mutationInitialize = useVotingappviatemplateInitializeMutation()
+function PollItem({ pollId, description, pollStart, pollEnd }: { pollId: number; description: string; pollStart: number; pollEnd: number }) {
+    const [candidateName, setCandidateName] = useState("")
+    const { mutateAsync: addCandidate, isPending: isAdding } = useInitializeCandidateMutation()
+    const { mutateAsync: vote, isPending: isVoting } = useVoteMutation()
+    const candidatesQuery = useVotingdappCandidatesByPollId(pollId)
 
-  return (
-    <Button onClick={() => mutationInitialize.mutateAsync()} disabled={mutationInitialize.isPending}>
-      Initialize Votingappviatemplate {mutationInitialize.isPending && '...'}
-    </Button>
-  )
-}
+    async function onAddCandidate(e: React.FormEvent) {
+        e.preventDefault()
+        await addCandidate({ pollId: BigInt(pollId), candidateName })
+        setCandidateName("")
+    }
 
-export function VotingappviatemplateButtonIncrement({ votingappviatemplate }: { votingappviatemplate: VotingappviatemplateAccount }) {
-  const incrementMutation = useVotingappviatemplateIncrementMutation({ votingappviatemplate })
+    async function onVote(e: React.FormEvent) {
+        e.preventDefault()
+        await vote({ pollId: BigInt(pollId), candidateName })
+        setCandidateName("")
+    }
 
-  return (
-    <Button variant="outline" onClick={() => incrementMutation.mutateAsync()} disabled={incrementMutation.isPending}>
-      Increment
-    </Button>
-  )
-}
+    return (
+        <Card className="p-4 space-y-3">
+            <div className="flex items-center justify-between">
+                <div className="font-medium">Poll #{pollId}</div>
+                <Button variant="outline" size="sm" onClick={() => candidatesQuery.refetch()}>
+                    Refresh
+                </Button>
+            </div>
+            <div className="text-sm text-muted-foreground">{description}</div>
 
-export function VotingappviatemplateButtonSet({ votingappviatemplate }: { votingappviatemplate: VotingappviatemplateAccount }) {
-  const setMutation = useVotingappviatemplateSetMutation({ votingappviatemplate })
+            <div className="text-sm text-muted-foreground flex gap-3">
+                <div>
+                    <span className="font-medium">Start:</span> {new Date(pollStart * 1000).toLocaleString()}
+                </div>
+                <div>
+                    <span className="font-medium">End:</span> {new Date(pollEnd * 1000).toLocaleString()}
+                </div>
+            </div>
 
-  return (
-    <Button
-      variant="outline"
-      onClick={() => {
-        const value = window.prompt('Set value to:', votingappviatemplate.data.count.toString() ?? '0')
-        if (!value || parseInt(value) === votingappviatemplate.data.count || isNaN(parseInt(value))) {
-          return
-        }
-        return setMutation.mutateAsync(parseInt(value))
-      }}
-      disabled={setMutation.isPending}
-    >
-      Set
-    </Button>
-  )
-}
+            <form onSubmit={onAddCandidate} className="flex gap-2 items-end">
+                <div className="flex-1">
+                    <Label htmlFor={`candidate-${pollId}`}>Candidate name</Label>
+                    <Input
+                        id={`candidate-${pollId}`}
+                        value={candidateName}
+                        onChange={(e) => setCandidateName(e.target.value.slice(0, 28))}
+                        placeholder="e.g. Alice"
+                        required
+                    />
+                </div>
+                <div className="text-xs text-muted-foreground">Max 28 characters to fit PDA seed</div>
+                <Button type="submit" disabled={isAdding}>
+                    {isAdding ? "Adding..." : "Add Candidate"}
+                </Button>
+            </form>
 
-export function VotingappviatemplateButtonDecrement({ votingappviatemplate }: { votingappviatemplate: VotingappviatemplateAccount }) {
-  const decrementMutation = useVotingappviatemplateDecrementMutation({ votingappviatemplate })
+            {candidatesQuery.data?.length ? (
+                (() => {
+                    const total = candidatesQuery.data.reduce((sum, c) => sum + Number(c.data.candidateVotes), 0)
+                    if (total === 0) return null
+                    return (
+                        <div className="space-y-1">
+                            <div className="text-sm">Total votes: {total}</div>
+                            {candidatesQuery.data.map((c) => {
+                                const votes = Number(c.data.candidateVotes)
+                                const pct = Math.round((votes / total) * 100)
+                                return (
+                                    <div key={`bar-${c.address}`} className="space-y-1">
+                                        <div className="flex justify-between text-xs">
+                                            <span>{c.data.candidateName}</span>
+                                            <span>{votes} ({pct}%)</span>
+                                        </div>
+                                        <div className="h-2 w-full bg-muted rounded">
+                                            <div className="h-2 bg-primary rounded" style={{ width: `${pct}%` }} />
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )
+                })()
+            ) : null}
 
-  return (
-    <Button variant="outline" onClick={() => decrementMutation.mutateAsync()} disabled={decrementMutation.isPending}>
-      Decrement
-    </Button>
-  )
-}
-
-export function VotingappviatemplateButtonClose({ votingappviatemplate }: { votingappviatemplate: VotingappviatemplateAccount }) {
-  const closeMutation = useVotingappviatemplateCloseMutation({ votingappviatemplate })
-
-  return (
-    <Button
-      variant="destructive"
-      onClick={() => {
-        if (!window.confirm('Are you sure you want to close this account?')) {
-          return
-        }
-        return closeMutation.mutateAsync()
-      }}
-      disabled={closeMutation.isPending}
-    >
-      Close
-    </Button>
-  )
+            {candidatesQuery.isLoading ? (
+                <div>Loading candidates…</div>
+            ) : candidatesQuery.isError ? (
+                <div className="text-red-500 text-sm">Failed to load candidates</div>
+            ) : (
+                <div className="space-y-2">
+                    {candidatesQuery.data?.length ? (
+                        candidatesQuery.data.map((c) => (
+                            <div key={c.address} className="flex items-center justify-between border rounded p-2">
+                                <div>
+                                    <div className="font-medium">{c.data.candidateName}</div>
+                                    <div className="text-xs text-muted-foreground">Votes: {Number(c.data.candidateVotes)}</div>
+                                </div>
+                                <Button
+                                    onClick={() => vote({ pollId: BigInt(pollId), candidateName: c.data.candidateName })}
+                                    disabled={isVoting}
+                                >
+                                    {isVoting ? "Voting…" : "Vote"}
+                                </Button>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="text-sm text-muted-foreground">No candidates yet.</div>
+                    )}
+                </div>
+            )}
+        </Card>
+    )
 }

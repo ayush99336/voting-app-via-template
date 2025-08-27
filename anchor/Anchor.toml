@@ -5,8 +5,8 @@ package_manager = "yarn"
 resolution = true
 skip-lint = false
 
-[programs.localnet]
-votingappviatemplate = "BfUzfrtvzJd3GCPgKbe4jMi9KWgHAWHnx1ovE5cgotAQ"
+[programs.devnet]
+votingdapp = "M93Hz8r6aaDDP7J5iKdJb3ZWrcE2RCJ8P8rFyPV6rvU"
 
 [registry]
 url = "https://api.apr.dev"

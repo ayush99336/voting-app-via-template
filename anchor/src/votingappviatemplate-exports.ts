@@ -1,34 +1,52 @@
 // Here we export some useful types and functions for interacting with the Anchor program.
 import { Account, address, getBase58Decoder, SolanaClient } from 'gill'
+import { PublicKey } from '@solana/web3.js'
 import { SolanaClusterId } from '@wallet-ui/react'
 import { getProgramAccountsDecoded } from './helpers/get-program-accounts-decoded'
-import { Votingappviatemplate, VOTINGAPPVIATEMPLATE_DISCRIMINATOR, VOTINGAPPVIATEMPLATE_PROGRAM_ADDRESS, getVotingappviatemplateDecoder } from './client/js'
-import VotingappviatemplateIDL from '../target/idl/votingappviatemplate.json'
+import {
+  Poll,
+  Candidate,
+  VOTINGDAPP_PROGRAM_ADDRESS,
+  getPollDecoder,
+  getCandidateDecoder,
+  POLL_DISCRIMINATOR,
+  CANDIDATE_DISCRIMINATOR,
+} from './client/js'
+import VotingdappIDL from '../target/idl/votingdapp.json'
 
-export type VotingappviatemplateAccount = Account<Votingappviatemplate, string>
+export type VotingdappPollAccount = Account<Poll, string>
+export type VotingdappCandidateAccount = Account<Candidate, string>
 
 // Re-export the generated IDL and type
-export { VotingappviatemplateIDL }
+export { VotingdappIDL }
 
-// This is a helper function to get the program ID for the Votingappviatemplate program depending on the cluster.
-export function getVotingappviatemplateProgramId(cluster: SolanaClusterId) {
+// This is a helper function to get the program ID for the Votingdapp program depending on the cluster.
+export function getVotingdappProgramId(cluster: SolanaClusterId) {
   switch (cluster) {
     case 'solana:devnet':
     case 'solana:testnet':
-      // This is the program ID for the Votingappviatemplate program on devnet and testnet.
-      return address('6z68wfurCMYkZG51s1Et9BJEd9nJGUusjHXNt4dGbNNF')
+      // This is the program ID for the Votingdapp program on devnet and testnet.
+      return address('M93Hz8r6aaDDP7J5iKdJb3ZWrcE2RCJ8P8rFyPV6rvU')
     case 'solana:mainnet':
     default:
-      return VOTINGAPPVIATEMPLATE_PROGRAM_ADDRESS
+      return VOTINGDAPP_PROGRAM_ADDRESS
   }
 }
 
 export * from './client/js'
 
-export function getVotingappviatemplateProgramAccounts(rpc: SolanaClient['rpc']) {
+export function getVotingdappPollAccounts(rpc: SolanaClient['rpc']) {
   return getProgramAccountsDecoded(rpc, {
-    decoder: getVotingappviatemplateDecoder(),
-    filter: getBase58Decoder().decode(VOTINGAPPVIATEMPLATE_DISCRIMINATOR),
-    programAddress: VOTINGAPPVIATEMPLATE_PROGRAM_ADDRESS,
+    decoder: getPollDecoder(),
+    filter: getBase58Decoder().decode(POLL_DISCRIMINATOR),
+    programAddress: VOTINGDAPP_PROGRAM_ADDRESS,
+  })
+}
+
+export function getVotingdappCandidateAccounts(rpc: SolanaClient['rpc']) {
+  return getProgramAccountsDecoded(rpc, {
+    decoder: getCandidateDecoder(),
+    filter: getBase58Decoder().decode(CANDIDATE_DISCRIMINATOR),
+    programAddress: VOTINGDAPP_PROGRAM_ADDRESS,
   })
 }
