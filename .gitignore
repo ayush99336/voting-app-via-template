@@ -126,3 +126,4 @@ test-ledger
 **/*.rs.bk
 recovered-key.json
 key.txt
+!anchor/target/idl/
