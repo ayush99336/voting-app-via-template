@@ -74,7 +74,7 @@ export type InitializeCandidateInstruction<
             AccountSignerMeta<TAccountSigner>
         : TAccountSigner,
       TAccountPoll extends string
-        ? ReadonlyAccount<TAccountPoll>
+        ? WritableAccount<TAccountPoll>
         : TAccountPoll,
       TAccountCandidate extends string
         ? WritableAccount<TAccountCandidate>
@@ -172,7 +172,7 @@ export async function getInitializeCandidateInstructionAsync<
   // Original accounts.
   const originalAccounts = {
     signer: { value: input.signer ?? null, isWritable: true },
-    poll: { value: input.poll ?? null, isWritable: false },
+    poll: { value: input.poll ?? null, isWritable: true },
     candidate: { value: input.candidate ?? null, isWritable: true },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
@@ -271,7 +271,7 @@ export function getInitializeCandidateInstruction<
   // Original accounts.
   const originalAccounts = {
     signer: { value: input.signer ?? null, isWritable: true },
-    poll: { value: input.poll ?? null, isWritable: false },
+    poll: { value: input.poll ?? null, isWritable: true },
     candidate: { value: input.candidate ?? null, isWritable: true },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };

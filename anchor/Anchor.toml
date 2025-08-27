@@ -12,7 +12,7 @@ votingappviatemplate = "BfUzfrtvzJd3GCPgKbe4jMi9KWgHAWHnx1ovE5cgotAQ"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

@@ -1,0 +1,14 @@
+ pnpm anchor deploy --provider.cluster devnet
+
+> voting-app-via-template@0.0.0 anchor /home/ayush99336/Desktop/BlockchainDev/School of Solana Fellowship S7/Solana Personal/voting-app-via-template
+> cd anchor && anchor deploy --provider.cluster devnet
+
+Deploying cluster: https://api.devnet.solana.com
+Upgrade authority: /home/ayush99336/.config/solana/id.json
+Deploying program "votingdapp"...
+Program path: /home/ayush99336/Desktop/BlockchainDev/School of Solana Fellowship S7/Solana Personal/voting-app-via-template/anchor/target/deploy/votingdapp.so...
+Program Id: M93Hz8r6aaDDP7J5iKdJb3ZWrcE2RCJ8P8rFyPV6rvU
+
+Signature: 4a8i5rBwfoANAUAMuGxxgkzhEHPTw9WhoYNv1qXQCVztibPWdGMD8PtW3AosH5x9onmzrTsWEo4abSL4E2Y2pFRQ
+
+Deploy success
