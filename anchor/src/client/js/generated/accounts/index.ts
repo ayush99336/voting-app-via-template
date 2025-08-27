@@ -6,4 +6,5 @@
  * @see https://github.com/codama-idl/codama
  */
 
-export * from './votingappviatemplate';
+export * from './candidate';
+export * from './poll';

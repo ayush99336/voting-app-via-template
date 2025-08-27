@@ -1,145 +1,128 @@
-import {
-  Blockhash,
-  createSolanaClient,
-  createTransaction,
-  generateKeyPairSigner,
-  Instruction,
-  isSolanaError,
-  KeyPairSigner,
-  signTransactionMessageWithSigners,
-} from 'gill'
-import {
-  fetchVotingappviatemplate,
-  getCloseInstruction,
-  getDecrementInstruction,
-  getIncrementInstruction,
-  getInitializeInstruction,
-  getSetInstruction,
-} from '../src'
-// @ts-ignore error TS2307 suggest setting `moduleResolution` but this is already configured
-import { loadKeypairSignerFromFile } from 'gill/node'
+import * as anchor from '@coral-xyz/anchor'
+import { Program } from '@coral-xyz/anchor'
+import { LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
+import BN from 'bn.js'
+import assert from 'assert'
+import { Votingdapp } from '../target/types/votingdapp'
 
-const { rpc, sendAndConfirmTransaction } = createSolanaClient({ urlOrMoniker: process.env.ANCHOR_PROVIDER_URL! })
+describe('votingdapp (concise)', () => {
+  anchor.setProvider(anchor.AnchorProvider.env())
+  const program = anchor.workspace.votingdapp as Program<Votingdapp>
 
-describe('votingappviatemplate', () => {
-  let payer: KeyPairSigner
-  let votingappviatemplate: KeyPairSigner
+  // test wallets
+  const creator = anchor.web3.Keypair.generate()
+  const voter1 = anchor.web3.Keypair.generate()
+  const voter2 = anchor.web3.Keypair.generate()
 
-  beforeAll(async () => {
-    votingappviatemplate = await generateKeyPairSigner()
-    payer = await loadKeypairSignerFromFile(process.env.ANCHOR_WALLET!)
+  // helpers
+  async function airdrop(pubkey: PublicKey, lamports = 2 * LAMPORTS_PER_SOL) {
+    const sig = await program.provider.connection.requestAirdrop(pubkey, lamports)
+    await program.provider.connection.confirmTransaction(sig, 'confirmed')
+  }
+
+  const u64le = (n: number | bigint) => {
+    const b = Buffer.alloc(8)
+    b.writeBigUInt64LE(BigInt(n))
+    return b
+  }
+  const getPollPda = (pollId: number) =>
+    anchor.web3.PublicKey.findProgramAddressSync([u64le(pollId)], program.programId)
+  const getCandidatePda = (pollId: number, name: string) =>
+    anchor.web3.PublicKey.findProgramAddressSync([u64le(pollId), Buffer.from(name)], program.programId)
+
+  // constants
+  const POLL_ID = 1
+  const DESC = 'What is your favorite peanut butter?'
+  const CAND_A = 'Smooth'
+  const CAND_B = 'Crunchy'
+
+  it('fund wallets', async () => {
+    await airdrop(creator.publicKey)
+    await airdrop(voter1.publicKey)
+    await airdrop(voter2.publicKey)
   })
 
-  it('Initialize Votingappviatemplate', async () => {
-    // ARRANGE
-    expect.assertions(1)
-    const ix = getInitializeInstruction({ payer: payer, votingappviatemplate: votingappviatemplate })
+  it('initialize poll', async () => {
+    const [pollPda] = getPollPda(POLL_ID)
 
-    // ACT
-    await sendAndConfirm({ ix, payer })
+    const pollStart = new BN(0)
+    const pollEnd = new BN(Math.floor(Date.now() / 1000) + 3600)
 
-    // ASSER
-    const currentVotingappviatemplate = await fetchVotingappviatemplate(rpc, votingappviatemplate.address)
-    expect(currentVotingappviatemplate.data.count).toEqual(0)
+    await program.methods
+      .initializePoll(new BN(POLL_ID), DESC, pollStart, pollEnd)
+      .accounts({ signer: creator.publicKey, poll: pollPda, systemProgram: anchor.web3.SystemProgram.programId })
+      .signers([creator])
+      .rpc()
+
+    const poll = await program.account.poll.fetch(pollPda)
+    assert.equal(poll.pollId.toNumber(), POLL_ID)
+    assert.equal(poll.description, DESC)
+    assert.equal(poll.pollOptionIndex.toNumber(), 0)
   })
 
-  it('Increment Votingappviatemplate', async () => {
-    // ARRANGE
-    expect.assertions(1)
-    const ix = getIncrementInstruction({
-      votingappviatemplate: votingappviatemplate.address,
-    })
+  it('initialize candidates', async () => {
+    const [pollPda] = getPollPda(POLL_ID)
+    const [candA] = getCandidatePda(POLL_ID, CAND_A)
+    const [candB] = getCandidatePda(POLL_ID, CAND_B)
 
-    // ACT
-    await sendAndConfirm({ ix, payer })
+    await program.methods
+      .initializeCandidate(CAND_A, new BN(POLL_ID))
+      .accounts({
+        signer: creator.publicKey,
+        poll: pollPda,
+        candidate: candA,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([creator])
+      .rpc()
 
-    // ASSERT
-    const currentCount = await fetchVotingappviatemplate(rpc, votingappviatemplate.address)
-    expect(currentCount.data.count).toEqual(1)
+    await program.methods
+      .initializeCandidate(CAND_B, new BN(POLL_ID))
+      .accounts({
+        signer: creator.publicKey,
+        poll: pollPda,
+        candidate: candB,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([creator])
+      .rpc()
+
+    const smooth = await program.account.candidate.fetch(candA)
+    const crunchy = await program.account.candidate.fetch(candB)
+    assert.equal(smooth.candidateName, CAND_A)
+    assert.equal(crunchy.candidateName, CAND_B)
+
+    const pollAfter = await program.account.poll.fetch(pollPda)
+    assert.equal(pollAfter.pollOptionIndex.toNumber(), 2)
   })
 
-  it('Increment Votingappviatemplate Again', async () => {
-    // ARRANGE
-    expect.assertions(1)
-    const ix = getIncrementInstruction({ votingappviatemplate: votingappviatemplate.address })
+  it('vote and verify counts', async () => {
+    const [pollPda] = getPollPda(POLL_ID)
+    const [candA] = getCandidatePda(POLL_ID, CAND_A)
 
-    // ACT
-    await sendAndConfirm({ ix, payer })
+    await program.methods
+      .vote(CAND_A, new BN(POLL_ID))
+      .accounts({
+        voter: voter1.publicKey,
+        candidate: candA,
+        poll: pollPda,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([voter1])
+      .rpc()
 
-    // ASSERT
-    const currentCount = await fetchVotingappviatemplate(rpc, votingappviatemplate.address)
-    expect(currentCount.data.count).toEqual(2)
-  })
+    await program.methods
+      .vote(CAND_A, new BN(POLL_ID))
+      .accounts({
+        voter: voter2.publicKey,
+        candidate: candA,
+        poll: pollPda,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([voter2])
+      .rpc()
 
-  it('Decrement Votingappviatemplate', async () => {
-    // ARRANGE
-    expect.assertions(1)
-    const ix = getDecrementInstruction({
-      votingappviatemplate: votingappviatemplate.address,
-    })
-
-    // ACT
-    await sendAndConfirm({ ix, payer })
-
-    // ASSERT
-    const currentCount = await fetchVotingappviatemplate(rpc, votingappviatemplate.address)
-    expect(currentCount.data.count).toEqual(1)
-  })
-
-  it('Set votingappviatemplate value', async () => {
-    // ARRANGE
-    expect.assertions(1)
-    const ix = getSetInstruction({ votingappviatemplate: votingappviatemplate.address, value: 42 })
-
-    // ACT
-    await sendAndConfirm({ ix, payer })
-
-    // ASSERT
-    const currentCount = await fetchVotingappviatemplate(rpc, votingappviatemplate.address)
-    expect(currentCount.data.count).toEqual(42)
-  })
-
-  it('Set close the votingappviatemplate account', async () => {
-    // ARRANGE
-    expect.assertions(1)
-    const ix = getCloseInstruction({
-      payer: payer,
-      votingappviatemplate: votingappviatemplate.address,
-    })
-
-    // ACT
-    await sendAndConfirm({ ix, payer })
-
-    // ASSERT
-    try {
-      await fetchVotingappviatemplate(rpc, votingappviatemplate.address)
-    } catch (e) {
-      if (!isSolanaError(e)) {
-        throw new Error(`Unexpected error: ${e}`)
-      }
-      expect(e.message).toEqual(`Account not found at address: ${votingappviatemplate.address}`)
-    }
+    const after = await program.account.candidate.fetch(candA)
+    assert.equal(after.candidateVotes.toNumber(), 2)
   })
 })
-
-// Helper function to keep the tests DRY
-let latestBlockhash: Awaited<ReturnType<typeof getLatestBlockhash>> | undefined
-async function getLatestBlockhash(): Promise<Readonly<{ blockhash: Blockhash; lastValidBlockHeight: bigint }>> {
-  if (latestBlockhash) {
-    return latestBlockhash
-  }
-  return await rpc
-    .getLatestBlockhash()
-    .send()
-    .then(({ value }) => value)
-}
-async function sendAndConfirm({ ix, payer }: { ix: Instruction; payer: KeyPairSigner }) {
-  const tx = createTransaction({
-    feePayer: payer,
-    instructions: [ix],
-    version: 'legacy',
-    latestBlockhash: await getLatestBlockhash(),
-  })
-  const signedTransaction = await signTransactionMessageWithSigners(tx)
-  return await sendAndConfirmTransaction(signedTransaction)
-}
