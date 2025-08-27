@@ -96,6 +96,8 @@ next-env.d.ts
 
 # Anchor
 anchor/target/
+!anchor/target/idl/
+!anchor/target/idl/*.json
 anchor/tests/*.so
 anchor/tests/*.json
 anchor/tests/*.log
@@ -126,4 +128,3 @@ test-ledger
 **/*.rs.bk
 recovered-key.json
 key.txt
-!anchor/target/idl/
