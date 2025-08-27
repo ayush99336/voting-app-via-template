@@ -17,14 +17,18 @@ export function useWalletTransactionSignAndSend() {
 
     // Pre-flight simulation to surface detailed errors/logs.
     try {
-      // Wallet UI client exposes simulateTransaction bound to its RPC
-      const sim = await (client as any).simulateTransaction(transaction, { commitment: 'processed' })
-      const err: any = (sim as any)?.value?.err
-      const logs: string[] | undefined = (sim as any)?.value?.logs
-      if (err) {
-        const reason = typeof err === 'string' ? err : JSON.stringify(err)
-        const logText = logs?.length ? `\nLogs:\n${logs.join('\n')}` : ''
-        throw new Error(`Simulation failed: ${reason}${logText}`)
+      type SimResult = { value?: { err?: unknown; logs?: string[] } }
+      type SimulateFn = (tx: unknown, opts?: { commitment?: 'processed' | 'confirmed' | 'finalized' }) => Promise<SimResult>
+      const simulate = (client as { simulateTransaction?: SimulateFn }).simulateTransaction
+      if (simulate) {
+        const sim = await simulate(transaction as unknown, { commitment: 'processed' })
+        const err = sim?.value?.err
+        const logs = sim?.value?.logs
+        if (err) {
+          const reason = typeof err === 'string' ? err : JSON.stringify(err)
+          const logText = logs?.length ? `\nLogs:\n${logs.join('\n')}` : ''
+          throw new Error(`Simulation failed: ${reason}${logText}`)
+        }
       }
     } catch (e) {
       // If simulation RPC fails for some reason, continue to send so wallets can show their own errors.

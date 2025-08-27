@@ -123,11 +123,7 @@ function PollItem({ pollId, description, pollStart, pollEnd }: { pollId: number;
         setCandidateName("")
     }
 
-    async function onVote(e: React.FormEvent) {
-        e.preventDefault()
-        await vote({ pollId: BigInt(pollId), candidateName })
-        setCandidateName("")
-    }
+    // Vote handler is triggered on each candidate row's button; no standalone form submit here.
 
     return (
         <Card className="p-4 space-y-3">

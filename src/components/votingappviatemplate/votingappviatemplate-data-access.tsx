@@ -102,12 +102,15 @@ export function useInitializePollMutation() {
       )
       return await signAndSend(ix, signer)
     },
-    onSuccess: (sig: string, _vars) => {
+    onSuccess: (sig: string) => {
       toast.success(`Initialized poll. Tx: ${sig}`)
       // Refresh all poll lists
       queryClient.invalidateQueries({ queryKey: ["votingdapp"] })
     },
-    onError: (e: any) => toast.error(e?.message ?? "Initialize poll failed"),
+    onError: (e: unknown) => {
+      const msg = e instanceof Error ? e.message : 'Initialize poll failed'
+      toast.error(msg)
+    },
   })
 }
 
@@ -145,13 +148,16 @@ export function useInitializeCandidateMutation() {
       )
       return await signAndSend(ix, signer)
     },
-    onSuccess: (sig: string, vars) => {
+    onSuccess: (sig: string) => {
       toast.success(`Initialized candidate. Tx: ${sig}`)
       // Refresh candidate list (prefix match) and global caches
       queryClient.invalidateQueries({ queryKey: ["votingdapp", "candidates-by-poll"] })
       queryClient.invalidateQueries({ queryKey: ["votingdapp", "candidates"] })
     },
-    onError: (e: any) => toast.error(e?.message ?? "Initialize candidate failed"),
+    onError: (e: unknown) => {
+      const msg = e instanceof Error ? e.message : 'Initialize candidate failed'
+      toast.error(msg)
+    },
   })
 }
 
@@ -188,12 +194,15 @@ export function useVoteMutation() {
       )
       return await signAndSend(ix, signer)
     },
-    onSuccess: (sig: string, vars) => {
+    onSuccess: (sig: string) => {
       toast.success(`Voted. Tx: ${sig}`)
       // Refresh candidate list (prefix match) and global caches
       queryClient.invalidateQueries({ queryKey: ["votingdapp", "candidates-by-poll"] })
       queryClient.invalidateQueries({ queryKey: ["votingdapp", "candidates"] })
     },
-    onError: (e: any) => toast.error(e?.message ?? "Vote failed"),
+    onError: (e: unknown) => {
+      const msg = e instanceof Error ? e.message : 'Vote failed'
+      toast.error(msg)
+    },
   })
 }
